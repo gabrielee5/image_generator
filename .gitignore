@@ -1,0 +1,4 @@
+.env
+venv
+generated_images
+.DS_Store
