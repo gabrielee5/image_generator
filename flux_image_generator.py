@@ -22,12 +22,13 @@ def get_images_from_folder(folder_path):
         images.extend(glob(os.path.join(folder_path, ext)))
     return images
 
-def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_images=1):
+def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_images=1, seed=None):
     """
     :param prompt: The text prompt for image generation
     :param input_images: List of paths to input images
     :param image_size: options: square_hd, square, portrait_4_3, portrait_16_9, landscape_4_3, landscape_16_9
     :param num_images: Number of images to generate
+    :param seed: Random number. With the same seed and the same prompt the image is always the same
     """
     def on_queue_update(update):
         if isinstance(update, fal_client.InProgress):
@@ -39,7 +40,8 @@ def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_im
         "image_size": image_size,
         "num_images": num_images,
         "enable_safety_checker": False,
-        "safety_tolerance": "6" # max freedom
+        "safety_tolerance": "6", # max freedom
+        "seed": seed # add the same seed to generate the same image (w/ same prompt)
     }
 
     if input_images:
