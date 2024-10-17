@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 import requests
 import base64
+from glob import glob
 
 # Load environment variables from .env file
 load_dotenv()
@@ -11,10 +12,21 @@ load_dotenv()
 def encode_image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
-    
-def generate_image(prompt, input_image_path=None, image_size="landscape_4_3", num_images=1):
+
+def get_images_from_folder(folder_path):
+    # Supported image formats
+    image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif']
+    images = []
+    for ext in image_extensions:
+        images.extend(glob(os.path.join(folder_path, ext)))
+    return images
+
+def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_images=1):
     """
+    :param prompt: The text prompt for image generation
+    :param input_images: List of paths to input images
     :param image_size: options: square_hd, square, portrait_4_3, portrait_16_9, landscape_4_3, landscape_16_9
+    :param num_images: Number of images to generate
     """
     def on_queue_update(update):
         if isinstance(update, fal_client.InProgress):
@@ -29,8 +41,10 @@ def generate_image(prompt, input_image_path=None, image_size="landscape_4_3", nu
         "safety_tolerance": "6"
     }
 
-    if input_image_path:
-        base64_image = encode_image_to_base64(input_image_path)
+    if input_images:
+        # If multiple images are provided, we'll use the first one
+        # You might want to implement a strategy for handling multiple images
+        base64_image = encode_image_to_base64(input_images[0])
         arguments["image"] = f"data:image/jpeg;base64,{base64_image}"
 
     result = fal_client.subscribe(
@@ -45,7 +59,6 @@ def generate_image(prompt, input_image_path=None, image_size="landscape_4_3", nu
 def save_image(url, folder):
     response = requests.get(url)
     if response.status_code == 200:
-        # Generate a unique filename using timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"generated_image_{timestamp}.jpg"
         filepath = os.path.join(folder, filename)
@@ -59,23 +72,37 @@ def save_image(url, folder):
         return None
 
 if __name__ == "__main__":
-    # Check if FAL_KEY is in the environment variables
     fal_key = os.getenv("FAL_KEY")
     if not fal_key:
         print("FAL_KEY not found in environment variables. Please check your .env file.")
         exit(1)
 
-    # Create a folder to store the images
     image_folder = "generated_images"
     os.makedirs(image_folder, exist_ok=True)
 
-    prompt = input("Insert Prompt: ")
-    input_image_path = "path/to/your/input/image.jpg"  # Replace with your input image path
+    upload_folder = "images_to_upload"
+    use_uploaded_images = input("Do you want to use uploaded images? (yes/no): ").lower() == 'yes'
 
-    result = generate_image(prompt, 'portrait_16_9')
-    
-    # Print the result
-    result = generate_image(prompt, input_image_path)
+    input_images = None
+    if use_uploaded_images:
+        if os.path.exists(upload_folder):
+            subfolder = input(f"Enter the name of the subfolder within '{upload_folder}' (or press Enter for root): ").strip()
+            full_path = os.path.join(upload_folder, subfolder) if subfolder else upload_folder
+            
+            if os.path.exists(full_path):
+                input_images = get_images_from_folder(full_path)
+                if not input_images:
+                    print(f"No images found in {full_path}. Proceeding without input images.")
+            else:
+                print(f"Folder {full_path} not found. Proceeding without input images.")
+        else:
+            print(f"Folder {upload_folder} not found. Proceeding without input images.")
+
+    prompt = input("Insert Prompt: ")
+    # image_size = input("Enter image size (square_hd, square, portrait_4_3, portrait_16_9, landscape_4_3, landscape_16_9): ")
+    # num_images = int(input("Enter number of images to generate: "))
+
+    result = generate_image(prompt, input_images, 'portrait_16_9')
 
     print(result)
 

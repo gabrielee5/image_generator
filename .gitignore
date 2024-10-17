@@ -2,3 +2,4 @@
 venv
 generated_images
 .DS_Store
+images_to_upload
