@@ -5,6 +5,7 @@ from datetime import datetime
 import requests
 import base64
 from glob import glob
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,7 +39,7 @@ def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_im
         "image_size": image_size,
         "num_images": num_images,
         "enable_safety_checker": False,
-        "safety_tolerance": "6"
+        "safety_tolerance": "6" # max freedom
     }
 
     if input_images:
@@ -71,6 +72,51 @@ def save_image(url, folder):
         print(f"Failed to download image from {url}")
         return None
 
+def save_request_log(log_data, log_file="request_log.json"):
+    """
+    Save the request log to a JSON file.
+    If the file exists, it appends the new data to the existing log.
+    """
+    if os.path.exists(log_file):
+        with open(log_file, 'r') as f:
+            existing_data = json.load(f)
+    else:
+        existing_data = []
+    
+    existing_data.append(log_data)
+    
+    with open(log_file, 'w') as f:
+        json.dump(existing_data, f, indent=2)
+    
+    print(f"Request log saved to {log_file}")
+
+def get_image_size_choice():
+    """
+    Present a menu for image size selection and return the chosen size.
+    """
+    size_options = [
+        "square_hd",
+        "square",
+        "portrait_4_3",
+        "portrait_16_9",
+        "landscape_4_3",
+        "landscape_16_9"
+    ]
+    
+    while True:
+        print("\nChoose an image size:")
+        for i, size in enumerate(size_options, 1):
+            print(f"{i}. {size}")
+        
+        try:
+            choice = int(input("Enter the number of your choice: "))
+            if 1 <= choice <= len(size_options):
+                return size_options[choice - 1]
+            else:
+                print("Invalid choice. Please enter a number from the list.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
 if __name__ == "__main__":
     fal_key = os.getenv("FAL_KEY")
     if not fal_key:
@@ -99,10 +145,10 @@ if __name__ == "__main__":
             print(f"Folder {upload_folder} not found. Proceeding without input images.")
 
     prompt = input("Insert Prompt: ")
-    # image_size = input("Enter image size (square_hd, square, portrait_4_3, portrait_16_9, landscape_4_3, landscape_16_9): ")
-    # num_images = int(input("Enter number of images to generate: "))
+    image_size = get_image_size_choice()
+    num_images = int(input("Enter number of images to generate: "))
 
-    result = generate_image(prompt, input_images, 'portrait_16_9')
+    result = generate_image(prompt, input_images, image_size, num_images)
 
     print(result)
 
@@ -113,3 +159,17 @@ if __name__ == "__main__":
             saved_images.append(saved_path)
 
     print(f"\nSaved {len(saved_images)} images in the '{image_folder}' folder.")
+
+    # Prepare log data
+    log_data = {
+        "timestamp": datetime.now().isoformat(),
+        "prompt": prompt,
+        "image_size": image_size,
+        "num_images": num_images,
+        "input_images": input_images,
+        "output_images": saved_images,
+        "api_response": result
+    }
+
+    # Save log data
+    save_request_log(log_data)
