@@ -55,23 +55,28 @@ def save_image(url, folder):
         print(f"Failed to download image from {url}")
         return None
 
-def save_request_log(log_data, log_file="request_log.json"):
+def save_request_log(log_data, log_file="request_log.json", logs_folder="logs"):
     """
     Save the request log to a JSON file.
     If the file exists, it appends the new data to the existing log.
     """
-    if os.path.exists(log_file):
-        with open(log_file, 'r') as f:
+    # Create logs folder if it doesn't exist
+    os.makedirs(logs_folder, exist_ok=True)
+
+    log_file_path = os.path.join(logs_folder, log_file)
+
+    if os.path.exists(log_file_path):
+        with open(log_file_path, 'r') as f:
             existing_data = json.load(f)
     else:
         existing_data = []
     
     existing_data.append(log_data)
     
-    with open(log_file, 'w') as f:
+    with open(log_file_path, 'w') as f:
         json.dump(existing_data, f, indent=2)
     
-    print(f"Request log saved to {log_file}")
+    print(f"Request log saved to {log_file_path}")
 
 def get_image_size_choice():
     """Present a menu for image size selection and return the chosen size"""
