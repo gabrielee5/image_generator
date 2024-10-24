@@ -190,7 +190,7 @@ if __name__ == "__main__":
         exit(1)
 
     # Create necessary folders
-    output_folder = "all_output/transformed_images"
+    output_folder = "all_output/face_to_many_img"
     upload_folder = "images_to_upload"
     logs_folder = "logs"
     
