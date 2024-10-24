@@ -3,29 +3,15 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 import requests
-import base64
-from glob import glob
 import json
 
 # Load environment variables from .env file
 load_dotenv()
 
-def encode_image_to_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
-
-def get_images_from_folder(folder_path):
-    # Supported image formats
-    image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif']
-    images = []
-    for ext in image_extensions:
-        images.extend(glob(os.path.join(folder_path, ext)))
-    return images
-
-def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_images=1, seed=None):
+def generate_image(prompt, image_size="landscape_4_3", num_images=1, seed=None):
     """
+    Generate images using fal.ai API
     :param prompt: The text prompt for image generation
-    :param input_images: List of paths to input images
     :param image_size: options: square_hd, square, portrait_4_3, portrait_16_9, landscape_4_3, landscape_16_9
     :param num_images: Number of images to generate
     :param seed: Random number. With the same seed and the same prompt the image is always the same
@@ -40,15 +26,9 @@ def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_im
         "image_size": image_size,
         "num_images": num_images,
         "enable_safety_checker": False,
-        "safety_tolerance": "6", # max freedom
-        "seed": seed # add the same seed to generate the same image (w/ same prompt)
+        "safety_tolerance": "6",  # max freedom
+        "seed": seed
     }
-
-    if input_images:
-        # If multiple images are provided, we'll use the first one
-        # You might want to implement a strategy for handling multiple images
-        base64_image = encode_image_to_base64(input_images[0])
-        arguments["image"] = f"data:image/jpeg;base64,{base64_image}"
 
     result = fal_client.subscribe(
         "fal-ai/flux-pro/v1.1",
@@ -60,6 +40,7 @@ def generate_image(prompt, input_images=None, image_size="landscape_4_3", num_im
     return result
 
 def save_image(url, folder):
+    """Save an image from URL to the specified folder"""
     response = requests.get(url)
     if response.status_code == 200:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -93,9 +74,7 @@ def save_request_log(log_data, log_file="request_log.json"):
     print(f"Request log saved to {log_file}")
 
 def get_image_size_choice():
-    """
-    Present a menu for image size selection and return the chosen size.
-    """
+    """Present a menu for image size selection and return the chosen size"""
     size_options = [
         "square_hd",
         "square",
@@ -120,40 +99,26 @@ def get_image_size_choice():
             print("Invalid input. Please enter a number.")
 
 if __name__ == "__main__":
+    # Check for API key
     fal_key = os.getenv("FAL_KEY")
     if not fal_key:
         print("FAL_KEY not found in environment variables. Please check your .env file.")
         exit(1)
 
+    # Create output folder
     image_folder = "generated_images"
     os.makedirs(image_folder, exist_ok=True)
 
-    upload_folder = "images_to_upload"
-    use_uploaded_images = input("Do you want to use uploaded images? (yes/no): ").lower() == 'yes'
-
-    input_images = None
-    if use_uploaded_images:
-        if os.path.exists(upload_folder):
-            subfolder = input(f"Enter the name of the subfolder within '{upload_folder}' (or press Enter for root): ").strip()
-            full_path = os.path.join(upload_folder, subfolder) if subfolder else upload_folder
-            
-            if os.path.exists(full_path):
-                input_images = get_images_from_folder(full_path)
-                if not input_images:
-                    print(f"No images found in {full_path}. Proceeding without input images.")
-            else:
-                print(f"Folder {full_path} not found. Proceeding without input images.")
-        else:
-            print(f"Folder {upload_folder} not found. Proceeding without input images.")
-
+    # Get generation parameters
     prompt = input("Insert Prompt: ")
     image_size = get_image_size_choice()
     num_images = int(input("Enter number of images to generate: "))
 
-    result = generate_image(prompt, input_images, image_size, num_images)
-
+    # Generate images
+    result = generate_image(prompt, image_size, num_images)
     print(result)
 
+    # Save generated images
     saved_images = []
     for image in result['images']:
         saved_path = save_image(image['url'], image_folder)
@@ -162,16 +127,13 @@ if __name__ == "__main__":
 
     print(f"\nSaved {len(saved_images)} images in the '{image_folder}' folder.")
 
-    # Prepare log data
+    # Prepare and save log data
     log_data = {
         "timestamp": datetime.now().isoformat(),
         "prompt": prompt,
         "image_size": image_size,
         "num_images": num_images,
-        "input_images": input_images,
         "output_images": saved_images,
         "api_response": result
     }
-
-    # Save log data
     save_request_log(log_data)
