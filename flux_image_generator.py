@@ -111,7 +111,7 @@ if __name__ == "__main__":
         exit(1)
 
     # Create output folder
-    image_folder = "generated_images"
+    image_folder = "all_output/generated_images"
     os.makedirs(image_folder, exist_ok=True)
 
     # Get generation parameters

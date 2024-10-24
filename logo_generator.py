@@ -143,7 +143,7 @@ if __name__ == "__main__":
         exit(1)
 
     # Create necessary folders
-    logo_folder = "generated_logos"
+    logo_folder = "all_output/generated_logos"
     logs_folder = "logs"
     os.makedirs(logo_folder, exist_ok=True)
     os.makedirs(logs_folder, exist_ok=True)
